@@ -1,0 +1,115 @@
+version: 3.5
+services:
+  airflow-scheduler:
+    image: terekete/airflow:1.10.12
+    depends_on:
+      - mysql
+      - redis
+    networks:
+      - airflow-backend
+    volumes:
+      - ${AIRFLOW_DAGS}:/opt/airflow/dags
+    environment:
+      EXECUTOR: CeleryExecutor
+      BACKEND: mysql
+      BACKEND_USER: airflow
+      BACKEND_PASSWORD: airflow1234#
+      BACKEND_DATABASE: airflow
+      BACKEND_HOST: mysql
+      BACKEND_PORT: 3306
+      BROKER: redis
+      CELERY_BROKER_HOST: redis
+      CELERY_BROKER_PORT: 6379
+      INITDB: "True"
+      FERNET_KEY:
+    command: airflow scheduler
+  airflow-webserver:
+    image: terekete/airflow:1.10.12
+    depends_on:
+      - mysql
+      - redis
+    ports:
+      - 8180:8080
+    volumes:
+      - ${AIRFLOW_DAGS}:/opt/airflow/dags
+    environment:
+      EXECUTOR: CeleryExecutor
+      BACKEND: mysql
+      BACKEND_USER: airflow
+      BACKEND_PASSWORD: airflow1234#
+      BACKEND_DATABASE: airflow
+      BACKEND_HOST: mysql
+      BACKEND_PORT: 3306
+      BROKER: redis
+      CELERY_BROKER_HOST: redis
+      CELERY_BROKER_PORT: 6379
+      FERNET_KEY:
+    command: airflow webserver
+    healthcheck:
+      test: ["CMD-SHELL", "[ -f /opt/airflow/airflow-webserver.pid]"]
+      interval: 30s
+      timeout: 30s
+      retries: 3
+  airflow-worker:
+    image: terekete/airflow:1.10.12
+    depends_on:
+      - mysql
+      - redis
+    ports:
+      - 8180:8080
+    volumes:
+      - ${AIRFLOW_DAGS}:/opt/airflow/dags
+    environment:
+      EXECUTOR: CeleryExecutor
+      BACKEND: mysql
+      BACKEND_USER: airflow
+      BACKEND_PASSWORD: airflow1234#
+      BACKEND_DATABASE: airflow
+      BACKEND_HOST: mysql
+      BACKEND_PORT: 3306
+      BROKER: redis
+      CELERY_BROKER_HOST: redis
+      CELERY_BROKER_PORT: 6379
+      FERNET_KEY:
+    command: airflow worker
+  airflow-flower:
+    image: terekete/airflow:1.10.12
+    depends_on:
+      - mysql
+      - redis
+    ports:
+      - 8180:8080
+    networks:
+      - airflow
+    environment:
+      EXECUTOR: CeleryExecutor
+      BACKEND: mysql
+      BACKEND_USER: airflow
+      BACKEND_PASSWORD: airflow1234#
+      BACKEND_DATABASE: airflow
+      BACKEND_HOST: mysql
+      BACKEND_PORT: 3306
+      BROKER: redis
+      CELERY_BROKER_HOST: redis
+      CELERY_BROKER_PORT: 6379
+      FERNET_KEY:
+    command: airflow flower
+  mysql:
+    image: mysql:5.7
+    ports:
+      - 3306:3306
+    networks:
+      - airflow
+    volumes:
+      - ${MYSQL_DATA}:/var/lib/mysql
+    environment:
+      MYSQL_USER: airflow
+      MYSQL_PASSWORD: airflow1234#
+      MYSQL_DATABASE: airflow
+      MYSQL_ROOT_PASSWORD: root1234#
+  redis:
+    image: redis:3.2
+    networks:
+      - airflow
+networks:
+  airflow:
